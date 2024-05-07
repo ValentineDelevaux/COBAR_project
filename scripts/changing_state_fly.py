@@ -343,7 +343,7 @@ class ChangingStateFly(Fly):
         #TODO: define another way to update arousal state
 
         visual_features, proximity = self.process_visual_observation(obs["vision"])
-        if self.arousal_state == 0 and proximity < self.desired_distance*10:
+        if self.arousal_state == 0 and proximity < self.desired_distance*3:
             self.arousal_state = 1
     
     def pre_step(self, action, sim):

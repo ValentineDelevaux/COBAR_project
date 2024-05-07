@@ -5,10 +5,22 @@ import seaborn as sns
 from pathlib import Path
 import logging
 import imageio
+import cv2
 from flygym.vision import add_insets
 
+def adjust_camera_to_include_flies(cam, positions_fly0, positions_fly1):
+    # Calculate the midpoint between the two flies
+    midpoint = (flies[0].position + flies[1].position) / 2
+
+    # Set the camera's position to the midpoint
+    cam.set_position(midpoint)
+
+    # Orient the camera to face the midpoint
+    # cam.set_orientation(midpoint)
+
+
 def save_video_with_vision_insets(
-    sim, cam, path, visual_input_hist, stabilization_time=0.02
+    sim, cam, path, visual_input_hist, positions_fly0, positions_fly1, stabilization_time=0.02
 ):
     """Save a list of frames as a video with insets showing the visual
     experience of the fly. This is almost a drop-in replacement of
@@ -40,16 +52,17 @@ def save_video_with_vision_insets(
             "a non-`None` value."
         )
 
+    adjust_camera_to_include_flies(cam, positions_fly0, positions_fly1)
+
     num_stab_frames = int(np.ceil(stabilization_time / cam._eff_render_interval))
 
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     logging.info(f"Saving video to {path}")
     with imageio.get_writer(path, fps=cam.fps) as writer:
-        for i, (frame, visual_inputs) in enumerate(zip(cam._frames, visual_input_hist)):
+        for i, (frame, visual_input) in enumerate(zip(cam._frames, visual_input_hist)):
             if i < num_stab_frames:
                 continue
-            for j, visual_input in enumerate(visual_inputs):
-                frame = add_insets(sim.flies[j].retina, frame, visual_input)
+            frame = add_insets(sim.flies[0].retina, frame, visual_input)
             writer.append_data(frame)
 
 def plot_chasing(time, fly0_speeds, fly1_speeds, proximities, smooth=True):
