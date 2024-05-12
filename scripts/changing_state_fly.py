@@ -45,11 +45,13 @@ _contact_sensor_placements = tuple(
     for leg in ["LF", "LM", "LH", "RF", "RM", "RH"]
     for segment in ["Tibia", "Tarsus1", "Tarsus2", "Tarsus3", "Tarsus4", "Tarsus5"]
 )
+variant = "courtship"
 
 class ChangingStateFly(Fly):
     def __init__(
             self, 
             timestep,
+            xml_variant=variant,
             preprogrammed_steps=None,
             intrinsic_freqs=np.ones(6) * 12,
             intrinsic_amps=np.ones(6) * 1,
@@ -73,7 +75,7 @@ class ChangingStateFly(Fly):
             **kwargs,
         ):
         # Initialize core NMF simulation
-        super().__init__(contact_sensor_placements=contact_sensor_placements, **kwargs, enable_vision=True)
+        super().__init__(contact_sensor_placements=contact_sensor_placements, xml_variant=xml_variant, **kwargs, enable_vision=True)
 
         if preprogrammed_steps is None:
             preprogrammed_steps = PreprogrammedSteps()
@@ -90,6 +92,7 @@ class ChangingStateFly(Fly):
         self.correction_rates = correction_rates
         self.amplitude_range = amplitude_range
         self.draw_corrections = draw_corrections
+        self._set_joints_stiffness_and_damping()
 
         # Define action and observation spaces
         self.action_space = spaces.Box(*amplitude_range, shape=(2,))
@@ -419,3 +422,12 @@ class ChangingStateFly(Fly):
         self.update_arousal_state(obs)
 
         return super().pre_step(action, sim)
+    
+    def _set_joints_stiffness_and_damping(self):
+        for joint in self.model.find_all("joint"):
+            if joint.name in self.actuated_joints:
+                joint.stiffness = self.joint_stiffness
+                joint.damping = self.joint_damping
+            else:
+                joint.stiffness = self.non_actuated_joint_stiffness
+                joint.damping = self.non_actuated_joint_damping

@@ -6,3 +6,4 @@ TODO:
 - Implement a changing state fly --> according to arousal state
 - Implement wings vibrations
 - Plot of target vs chasing fly behavior (inspire from papers)
+- Start wings vibration/crabe walking when the fly stops for target fly stops for some time
