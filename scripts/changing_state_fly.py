@@ -4,7 +4,6 @@ from gymnasium import spaces
 from gymnasium.utils.env_checker import check_env
 
 from flygym.simulation import SingleFlySimulation, Fly
-from flygym.examples.common import PreprogrammedSteps
 from flygym.examples.cpg_controller import CPGNetwork
 from flygym.preprogrammed import get_cpg_biases
 
@@ -25,6 +24,8 @@ import flygym.util as util
 import flygym.vision as vision
 from flygym.arena import BaseArena
 from flygym.util import get_data_path
+
+from .preprogrammed_steps import PreprogrammedSteps
 
 
 if TYPE_CHECKING:
@@ -72,6 +73,7 @@ class ChangingStateFly(Fly):
             obj_threshold=0.15, 
             decision_interval=0.05,
             arousal_state=0,
+            wings_state=0,
             **kwargs,
         ):
         # Initialize core NMF simulation
@@ -122,8 +124,10 @@ class ChangingStateFly(Fly):
         self.decision_interval = decision_interval
         self.num_substeps = int(self.decision_interval / self.timestep)
         self.arousal_state = arousal_state
+        self.wings_state = wings_state
         self.visual_inputs_hist = []
         self.coms = np.empty((self.retina.num_ommatidia_per_eye, 2))
+        self.timesteps_at_desired_distance = 0
 
         for i in range(self.retina.num_ommatidia_per_eye):
             mask = self.retina.ommatidia_id_map == i + 1
@@ -302,6 +306,8 @@ class ChangingStateFly(Fly):
         walking_speed = self.calc_walking_speed(proximity)
         fly_action *= walking_speed
 
+        # TODO: detect long stops and switch gait / wings vibrations
+
         return fly_action, proximity
 
     def get_random_action(self, curr_time):
@@ -348,6 +354,20 @@ class ChangingStateFly(Fly):
         visual_features, proximity = self.process_visual_observation(obs["vision"])
         if self.arousal_state == 0 and proximity < self.desired_distance*3:
             self.arousal_state = 1
+
+    def update_wings_state(self, obs):
+        """
+        Update the wings state based on the observation.
+
+        Parameters:
+        - obs (np.ndarray): The observation.
+        """
+        # TODO
+        visual_features, proximity = self.process_visual_observation(obs["vision"])
+        if proximity < self.desired_distance and self.timesteps_at_desired_distance < 10:
+            self.timesteps_at_desired_distance += 1
+        elif proximity < self.desired_distance and self.timesteps_at_desired_distance >= 10:
+            self.wings_state = 1
     
     def pre_step(self, action, sim):
         """Step the simulation forward one timestep.
@@ -378,6 +398,8 @@ class ChangingStateFly(Fly):
 
         joints_angles = []
         adhesion_onoff = []
+
+        # Get legs joint angles
         for i, leg in enumerate(self.preprogrammed_steps.legs):
             # update retraction correction amounts
             self.retraction_correction[i] = self._update_correction_amount(
@@ -413,6 +435,11 @@ class ChangingStateFly(Fly):
             )
             adhesion_onoff.append(my_adhesion_onoff)
 
+        # Get wings joint   angles
+        # for i, wing in enumerate(self.preprogrammed_steps.wings):
+        my_joints_angles = self.get_wings_joint_angles(self.cpg_network.curr_phases[0])
+        joints_angles.append(my_joints_angles)
+
         action = {
             "joints": np.array(np.concatenate(joints_angles)),
             "adhesion": np.array(adhesion_onoff).astype(int),
@@ -421,8 +448,30 @@ class ChangingStateFly(Fly):
         # update arousal state
         self.update_arousal_state(obs)
 
+        # TODO: update wings state
+        # self.update_wings_state(obs)
+
         return super().pre_step(action, sim)
     
+    def get_wings_joint_angles(self, phase):
+        """Get joint angles for both wings.
+
+        Parameters
+        ----------
+        wing : str
+            Wing name.
+
+        Returns
+        -------
+        np.ndarray
+            Joint angles of the wing. The shape of the array is (6,)
+        """
+        if self.wings_state == 0:
+            return np.array([0, 0, 0, 0, 0, 0])
+        elif self.wings_state == 1:
+            return self.preprogrammed_steps.get_wing_angles(phase)
+    
+
     def _set_joints_stiffness_and_damping(self):
         for joint in self.model.find_all("joint"):
             if joint.name in self.actuated_joints:

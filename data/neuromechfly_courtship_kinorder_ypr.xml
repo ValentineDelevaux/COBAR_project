@@ -111,16 +111,18 @@
 			</body>
 			<body name="LWing" pos="-0.543958768248558 0.3698328882455826 0.18139421939849854" quat="0.7071067657322373 0 0 0.70710679664085752">
 				<geom name="LWing" class="nmf" type="mesh" contype="0" conaffinity="0" group="1" pos="0 0 0" quat="1 0 0 -1.4551916978336921e-15" mesh="mesh_LWing" mass="2.500060809494719e-06"/>
-				<joint name="joint_LWing_roll" class="nmf" type="hinge" pos="0 0 0" axis="1 0 0" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>
-				<joint name="joint_LWing_yaw" class="nmf" type="hinge" pos="0 0 0" axis="0 0 1" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>				
+				<joint name="joint_LWing_roll" class="nmf" type="hinge" pos="0 0 0" axis="0 0 1" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>
+				<joint name="joint_LWing_yaw" class="nmf" type="hinge" pos="0 0 0" axis="1 0 0" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>				
+				<joint name="joint_LWing" class="nmf" type="hinge" pos="0 0 0" axis="0 1 0" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>				
 			</body>
 			<body name="RHaltere" pos="-0.8058251738548279 -0.2135564610362053 -0.1492682695388794" quat="1 0 0 0">
 				<geom name="RHaltere" class="nmf" type="mesh" contype="0" conaffinity="0" group="1" pos="0 0 0" quat="1 0 0 0" mesh="mesh_RHaltere" mass="1.4161459875842644e-06"/>
 			</body>
 			<body name="RWing" pos="-0.543958768248558 -0.3698328882455826 0.18139421939849854" quat="0.7071067657322373 0 0 -0.70710679664085752">
 				<geom name="RWing" class="nmf" type="mesh" contype="0" conaffinity="0" group="1" pos="0 0 0" quat="1 0 0 1.4551916978336921e-15" mesh="mesh_RWing" mass="2.499939190505281e-06"/>
-				<joint name="joint_RWing_roll" class="nmf" type="hinge" pos="0 0 0" axis="1 0 0" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>
-				<joint name="joint_RWing_yaw" class="nmf" type="hinge" pos="0 0 0" axis="0 0 1" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>
+				<joint name="joint_RWing_roll" class="nmf" type="hinge" pos="0 0 0" axis="0 0 1" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>
+				<joint name="joint_RWing_yaw" class="nmf" type="hinge" pos="0 0 0" axis="1 0 0" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>
+				<joint name="joint_RWing" class="nmf" type="hinge" pos="0 0 0" axis="0 1 0" stiffness="0.0" springref="0.0" damping="0.01" frictionloss="0.0"/>
 			</body>
 			<body name="LFCoxa" pos="-0.16059550642967224 0.1715880036354065 -0.23021531105041504" quat="1 0 0 0">
 				<geom name="LFCoxa" class="nmf" type="mesh" contype="0" conaffinity="0" condim="3" group="2" friction="1 0 0" solref="-1000000 -10000" margin="0.0" pos="0 0 0" quat="1 0 0 0" mesh="mesh_LFCoxa" fluidcoef="0 0 0 0 0" mass="4.522004066249335e-06"/>
@@ -598,12 +600,18 @@
 		<position name="actuator_position_joint_LHTarsus1" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LHTarsus1" kp="2.0"/>
 		<velocity name="actuator_velocity_joint_LHTarsus1" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LHTarsus1" kv="0.0"/>
 		<motor name="actuator_torque_joint_LHTarsus1" class="nmf" forcelimited="true" forcerange="-inf inf" joint="joint_LHTarsus1"/>
+		<position name="actuator_position_joint_LWing" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LWing" kp="2.0"/>
+		<velocity name="actuator_velocity_joint_LWing" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LWing" kv="0.0"/>
+		<motor name="actuator_torque_joint_LWing" class="nmf" forcelimited="true" forcerange="-inf inf" joint="joint_LWing"/>
 		<position name="actuator_position_joint_LWing_yaw" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LWing_yaw" kp="2.0"/>
 		<velocity name="actuator_velocity_joint_LWing_yaw" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LWing_yaw" kv="0.0"/>
 		<motor name="actuator_torque_joint_LWing_yaw" class="nmf" forcelimited="true" forcerange="-inf inf" joint="joint_LWing_yaw"/>
 		<position name="actuator_position_joint_LWing_roll" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LWing_roll" kp="2.0"/>
 		<velocity name="actuator_velocity_joint_LWing_roll" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_LWing_roll" kv="0.0"/>
 		<motor name="actuator_torque_joint_LWing_roll" class="nmf" forcelimited="true" forcerange="-inf inf" joint="joint_LWing_roll"/>
+		<position name="actuator_position_joint_RWing" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_RWing" kp="2.0"/>
+		<velocity name="actuator_velocity_joint_RWing" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_RWing" kv="0.0"/>
+		<motor name="actuator_torque_joint_RWing" class="nmf" forcelimited="true" forcerange="-inf inf" joint="joint_RWing"/>
 		<position name="actuator_position_joint_RWing_yaw" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_RWing_yaw" kp="2.0"/>
 		<velocity name="actuator_velocity_joint_RWing_yaw" class="nmf" forcelimited="true" ctrlrange="-1000000 1000000" forcerange="-inf inf" joint="joint_RWing_yaw" kv="0.0"/>
 		<motor name="actuator_torque_joint_RWing_yaw" class="nmf" forcelimited="true" forcerange="-inf inf" joint="joint_RWing_yaw"/>
