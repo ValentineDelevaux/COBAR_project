@@ -47,6 +47,9 @@ _contact_sensor_placements = tuple(
     for segment in ["Tibia", "Tarsus1", "Tarsus2", "Tarsus3", "Tarsus4", "Tarsus5"]
 )
 variant = "courtship"
+threshold_switch = 100
+threshold_wings_open = 2000
+speed_thresh = 0.2
 
 class ChangingStateFly(Fly):
     def __init__(
@@ -130,6 +133,8 @@ class ChangingStateFly(Fly):
         self.visual_inputs_hist = []
         self.coms = np.empty((self.retina.num_ommatidia_per_eye, 2))
         self.timesteps_at_desired_distance = 0
+        self.timesteps_wings_open = 0
+        self.last_open_wing = 'L'
 
         for i in range(self.retina.num_ommatidia_per_eye):
             mask = self.retina.ommatidia_id_map == i + 1
@@ -352,9 +357,6 @@ class ChangingStateFly(Fly):
         else:
             return self.get_random_action(curr_time)
         
-        
-        
-
 
     def update_state(self, obs):
         """
@@ -364,23 +366,37 @@ class ChangingStateFly(Fly):
         Parameters:
         - obs (np.ndarray): The observation.
         """
-        # TODO
-        visual_features, proximity = self.process_visual_observation(obs["vision"])
+        _, proximity = self.process_visual_observation(obs["vision"])
+        speed = self.calc_walking_speed(proximity)
 
+        # Update arousal state if the other fly is close
         if self.arousal_state == 0 and proximity < self.desired_distance*3:
             self.arousal_state = 1
 
-        if proximity < self.desired_distance :
+        # Switch state if the fly stays at the desired distance for a certain number of timesteps
+        if speed > speed_thresh:
             self.timesteps_at_desired_distance = 0
             self.wings_state = 0
             self.crab_state = 0
-        elif proximity >= self.desired_distance and self.timesteps_at_desired_distance < 10:
+        elif speed < speed_thresh and self.timesteps_at_desired_distance < threshold_switch:
             self.timesteps_at_desired_distance += 1
-        elif proximity >= self.desired_distance and self.timesteps_at_desired_distance >= 10:
+        elif speed < speed_thresh and self.timesteps_at_desired_distance >= threshold_switch:
             self.wings_state = 1
             self.crab_state = 1
             self.arousal_state = 0  #To stop the chasing action
-    
+
+        # Update wings and crabe state
+        if self.wings_state == 1:
+            self.timesteps_wings_open += 1
+            if self.timesteps_wings_open >= threshold_wings_open:
+                self.wings_state = 0
+                self.timesteps_wings_open = 0
+
+                if self.last_open_wing == 'L':
+                    self.last_open_wing = 'R'
+                else:
+                    self.last_open_wing = 'L'
+
     def pre_step(self, action, sim):
         """Step the simulation forward one timestep.
 
@@ -449,7 +465,7 @@ class ChangingStateFly(Fly):
 
         # Get wings joint   angles
         # for i, wing in enumerate(self.preprogrammed_steps.wings):
-        my_joints_angles = self.get_wings_joint_angles(self.cpg_network.curr_phases[0])
+        my_joints_angles = self.get_wings_joint_angles(self.last_open_wing)
         joints_angles.append(my_joints_angles)
 
         action = {
@@ -474,12 +490,12 @@ class ChangingStateFly(Fly):
                 elif joint == 40 : 
                     joint_action[joint] = 1 #RH  
         '''
-        # TODO: update wings state
+        # Update fly state
         self.update_state(obs)
 
         return super().pre_step(action, sim)
     
-    def get_wings_joint_angles(self, phase):
+    def get_wings_joint_angles(self, wing_to_open):
         """Get joint angles for both wings.
 
         Parameters
@@ -495,14 +511,8 @@ class ChangingStateFly(Fly):
         if self.wings_state == 0:
             return np.array([0, 0, 0, 0, 0, 0])
         elif self.wings_state == 1:
-            return self.preprogrammed_steps.get_wing_angles(phase)
-    
-
-    def _set_joints_stiffness_and_damping(self):
-        for joint in self.model.find_all("joint"):
-            if joint.name in self.actuated_joints:
-                joint.stiffness = self.joint_stiffness
-                joint.damping = self.joint_damping
-            else:
-                joint.stiffness = self.non_actuated_joint_stiffness
-                joint.damping = self.non_actuated_joint_damping
+            if wing_to_open == 'L':
+                return np.array([-1.2, 0, 0, 0, 0, 0])
+            elif wing_to_open == 'R':
+                return np.array([0, 0, 0, 1.2, 0, 0])
+            # return self.preprogrammed_steps.get_wing_angles(phase)

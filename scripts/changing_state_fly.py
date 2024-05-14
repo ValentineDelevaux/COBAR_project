@@ -47,6 +47,7 @@ _contact_sensor_placements = tuple(
     for segment in ["Tibia", "Tarsus1", "Tarsus2", "Tarsus3", "Tarsus4", "Tarsus5"]
 )
 variant = "courtship"
+threshold_switch = 100
 
 class ChangingStateFly(Fly):
     def __init__(

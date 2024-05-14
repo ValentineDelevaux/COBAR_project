@@ -180,6 +180,47 @@ class PreprogrammedSteps:
         wing_angles = np.concatenate([wing_angle_L, wing_angle_R])
         wing_angles -= magnitude
         return wing_angles
+    
+    def get_wing_angles_2(self, phase, magnitude=1.2, speed_multiplier=0.2):
+        """Get wing angles at a given phase.
+
+        Parameters
+        ----------
+        phase : float or np.ndarray
+            Phase or array of phases of the step normalized to [0, 2π].
+        magnitude : float or np.ndarray, optional
+            Magnitude of the step. Default: 1 (the preprogrammed steps as
+            provided).
+
+        Returns
+        -------
+        np.ndarray
+            Wing angles at the given phase(s). The shape of the array is
+            (2, n) if ``phase`` is a 1D array of n elements, or (2,) if
+            ``phase`` is a scalar.
+        """
+        if isinstance(phase, float) or isinstance(phase, int) or phase.shape == ():
+            phase = np.array([phase])[0]
+        phase = (phase * speed_multiplier) % (2 * np.pi)
+        if phase < np.pi:
+            wing_angle_L = np.array(
+                [
+                    0,  # roll --> negative vers l'ext pour l'aile gauche
+                    0,              # yaw --> negative = vers le bas (sol)
+                    0               # pitch
+                ]
+            ) * magnitude
+        else:
+            wing_angle_L = np.array(
+                [
+                    -1,  # roll
+                    0,  # yaw
+                    0               # pitch
+                ]
+            ) * magnitude
+        wing_angle_R = np.array([0,0,0])
+        wing_angles = np.concatenate([wing_angle_L, wing_angle_R])
+        return wing_angles
 
     @property
     def default_pose(self):

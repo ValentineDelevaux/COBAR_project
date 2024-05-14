@@ -2,11 +2,12 @@
 Implement courtship chasing while keeping a specific distance to the other fly using visual detection of the distance to the other fly
 
 TODO: 
-- Implement sideway walking --> change dof, biases etc
-- Implement wings UNILATERAL extension and vibration
-- Plot of target vs chasing fly behavior (inspire from papers)
-- Start wings vibration/crabe walking when the fly stops for target fly stops for some time
-- stop vibrating after a specific time --> add a counter in attribute and reset the timesteps counter
+- Implement sideway walking
+- switch gait from chasing to crabe walking
+- find the optimal trheshold in nb of steps to start wings extension / crabe walking
+- define when it extends right or left wing
+- faire un notebook clena avec tout
+- Plot to put in the report
 
 ## Prerequisites
 the files contained in `data` must be added to the flygym-v1 repository for the provided code to run:
