@@ -72,7 +72,7 @@ class ChangingStateFly(Fly):
             desired_distance=0.2, 
             obj_threshold=0.15, 
             decision_interval=0.05,
-            arousal_state=0,
+            arousal_state=1,
             wings_state=0,
             crab_state=0,
             **kwargs,
@@ -326,7 +326,12 @@ class ChangingStateFly(Fly):
             action = np.array([0.2, 1.2])
 
         return action, proximity
-
+    '''
+    def get_crab_action(self) :
+        proximity = None
+        action = np.array([0.2, 1.2])
+        return action, proximity
+    '''
     def get_action(self, obs, curr_time):
         """
         Get the action to take based on the arousal state: 
@@ -339,38 +344,42 @@ class ChangingStateFly(Fly):
         Returns:
         - action (np.ndarray): The action.
         """
+
         if self.arousal_state == 1:
             return self.get_chasing_action(obs)
+        #elif self.crab_state == 1:
+        #    return self.get_crab_action()
         else:
             return self.get_random_action(curr_time)
         
-    def update_arousal_state(self, obs):
-        """
-        Update the arousal state based on the observation.
+        
+        
 
-        Parameters:
-        - obs (np.ndarray): The observation.
-        """
-        #TODO: define another way to update arousal state
 
-        visual_features, proximity = self.process_visual_observation(obs["vision"])
-        if self.arousal_state == 0 and proximity < self.desired_distance*3:
-            self.arousal_state = 1
-
-    def update_wings_state(self, obs):
+    def update_state(self, obs):
         """
         Update the wings state based on the observation.
+        Update the arousal state based on the observation.
 
         Parameters:
         - obs (np.ndarray): The observation.
         """
         # TODO
         visual_features, proximity = self.process_visual_observation(obs["vision"])
-        if proximity < self.desired_distance and self.timesteps_at_desired_distance < 10:
+
+        if self.arousal_state == 0 and proximity < self.desired_distance*3:
+            self.arousal_state = 1
+
+        if proximity < self.desired_distance :
+            self.timesteps_at_desired_distance = 0
+            self.wings_state = 0
+            self.crab_state = 0
+        elif proximity >= self.desired_distance and self.timesteps_at_desired_distance < 10:
             self.timesteps_at_desired_distance += 1
-        elif proximity < self.desired_distance and self.timesteps_at_desired_distance >= 10:
+        elif proximity >= self.desired_distance and self.timesteps_at_desired_distance >= 10:
             self.wings_state = 1
             self.crab_state = 1
+            self.arousal_state = 0  #To stop the chasing action
     
     def pre_step(self, action, sim):
         """Step the simulation forward one timestep.
@@ -381,23 +390,7 @@ class ChangingStateFly(Fly):
             Array of shape (2,) containing descending signal encoding
             turning.
         """
-        physics = sim.physics
-        joint_action = action["joints"]
-        if self.crab_state == 1 : 
-            for joint in range(len(joint_action)):
-                if joint == 4 :
-                    joint_action[joint] = 0.3 #LF
-                elif joint == 11 : 
-                    joint_action[joint] = 0.6 #LM
-                elif joint == 18 : 
-                    joint_action[joint] = 1 #LH
-                elif joint == 25 :
-                    joint_action[joint] = 0.3 #RF
-                #elif joint <= 34 : 
-                elif joint == 32 : 
-                    joint_action[joint] = 0.6 # RM
-                elif joint == 40 : 
-                    joint_action[joint] = 1 #RH            
+        physics = sim.physics          
 
         # update CPG parameters
         amps = np.repeat(np.abs(action[:, np.newaxis]), 3, axis=1).ravel()
@@ -463,12 +456,26 @@ class ChangingStateFly(Fly):
             "joints": np.array(np.concatenate(joints_angles)),
             "adhesion": np.array(adhesion_onoff).astype(int),
         }
-
-        # update arousal state
-        self.update_arousal_state(obs)
-
+        '''
+        joint_action = action["joints"]
+        if self.crab_state == 1 : 
+            for joint in range(len(joint_action)):
+                if joint == 4 :
+                    joint_action[joint] = 0.3 #LF
+                elif joint == 11 : 
+                    joint_action[joint] = 0.6 #LM
+                elif joint == 18 : 
+                    joint_action[joint] = 1 #LH
+                elif joint == 25 :
+                    joint_action[joint] = 0.3 #RF
+                #elif joint <= 34 : 
+                elif joint == 32 : 
+                    joint_action[joint] = 0.6 # RM
+                elif joint == 40 : 
+                    joint_action[joint] = 1 #RH  
+        '''
         # TODO: update wings state
-        # self.update_wings_state(obs)
+        self.update_state(obs)
 
         return super().pre_step(action, sim)
     
