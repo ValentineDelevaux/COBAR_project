@@ -3,9 +3,8 @@ Implement courtship chasing while keeping a specific distance to the other fly u
 
 TODO: 
 - Implement sideway walking
-- switch gait from chasing to crabe walking
 - find the optimal trheshold in nb of steps to start wings extension / crabe walking
-- define when it extends right or left wing
+- check que ca arrete d'extend ses wings apres un certain temps
 - faire un notebook clena avec tout
 - Plot to put in the report
 

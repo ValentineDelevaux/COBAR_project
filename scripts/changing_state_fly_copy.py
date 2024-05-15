@@ -136,7 +136,7 @@ class ChangingStateFly(Fly):
         self.coms = np.empty((self.retina.num_ommatidia_per_eye, 2))
         self.timesteps_at_desired_distance = 0
         self.timesteps_wings_open = 0
-        self.last_open_wing = 'L'
+        self.last_open_wing = None
 
         for i in range(self.retina.num_ommatidia_per_eye):
             mask = self.retina.ommatidia_id_map == i + 1
@@ -327,7 +327,7 @@ class ChangingStateFly(Fly):
         - action (np.ndarray): The random action.
         """
         proximity = None
-        if curr_time < 1:
+        if curr_time > 1:
             action = np.array([1.2, 0.2])
         else:
             action = np.array([0.2, 1.2])
@@ -373,7 +373,7 @@ class ChangingStateFly(Fly):
         Parameters:
         - obs (np.ndarray): The observation.
         """
-        _, proximity = self.process_visual_observation(obs["vision"])
+        visual_features, proximity = self.process_visual_observation(obs["vision"])
         speed = self.calc_walking_speed(proximity)
 
         # Update arousal state if the other fly is close
@@ -410,7 +410,10 @@ class ChangingStateFly(Fly):
                 self.wings_state = 0
                 self.timesteps_wings_open = 0
 
-                if self.last_open_wing == 'L':
+                left_deviation = 1 - visual_features[1]
+                right_deviation = visual_features[4]
+
+                if left_deviation > right_deviation:
                     self.last_open_wing = 'R'
                 else:
                     self.last_open_wing = 'L'
@@ -481,9 +484,14 @@ class ChangingStateFly(Fly):
             )
             adhesion_onoff.append(my_adhesion_onoff)
 
+        #######
+        # if self.crab_state == 1 :
+        #     joints_angles = self.get_joint_angles_crabe_walk(joints_angles, 'L')
+        #######
+
         # Get wings joint   angles
         # for i, wing in enumerate(self.preprogrammed_steps.wings):
-        my_joints_angles = self.get_wings_joint_angles(self.last_open_wing)
+        my_joints_angles = self.get_wings_joint_angles(self.last_open_wing, obs)
         joints_angles.append(my_joints_angles)
 
         action = {
@@ -513,7 +521,49 @@ class ChangingStateFly(Fly):
 
         return super().pre_step(action, sim)
     
-    def get_wings_joint_angles(self, wing_to_open):
+    def get_joint_angles_crabe_walk(self, joint_angles, leg_to_correct):
+        """
+        Get the joint angles for the crabe walk from the normal walk joint angles.
+
+        Parameters:
+        - joint_angles (np.ndarray): The joint angles.
+
+        Returns:
+        - joint_angles (np.ndarray): The joint angles for the crabe walk.
+        """
+        joint_angles_prev = joint_angles.copy()
+        
+        # TODO: switch the right joint angles
+        # for leg in range(6):
+        #     for dof in range(7):
+        #         if dof == 0: # Coxa pitch
+        #             joint_angles[leg * 7 + dof] = joint_angles_prev[leg * 7 + dof]
+        #         elif dof == 1: # Coxa roll
+        #             joint_angles[leg * 7 + dof] = 0.6
+        #         elif dof == 2: # Coxa yaw
+        #             joint_angles[leg * 7 + dof] = 1
+        #         elif dof == 3: # Femur pitch
+        #             joint_angles[leg * 7 + dof] = 0.3
+        #         elif dof == 4: # Femur roll
+        #             joint_angles[leg * 7 + dof] = 0.6
+        #         elif dof == 5: # Tibia pitch
+        #             joint_angles[leg * 7 + dof] = 1
+        #         elif dof == 6: # Tarsus roll
+        #             joint_angles[leg * 7 + dof] = 0.3
+
+        if leg_to_correct == 'L':
+            for leg in range(3):
+                for dof in range(7):
+                    joint_angles[leg * 7 + dof] = -joint_angles_prev[leg * 7 + dof]
+        elif leg_to_correct == 'R':
+            for leg in range(3,6):
+                for dof in range(7):
+                    joint_angles[leg * 7 + dof] = joint_angles_prev[leg * 7 + dof]
+
+        return joint_angles
+
+    
+    def get_wings_joint_angles(self, wing_to_open, obs):
         """Get joint angles for both wings.
 
         Parameters
@@ -533,4 +583,13 @@ class ChangingStateFly(Fly):
                 return np.array([-1.2, 0, 0, 0, 0, 0])
             elif wing_to_open == 'R':
                 return np.array([0, 0, 0, 1.2, 0, 0])
+            else:
+                visual_features, proximity = self.process_visual_observation(obs["vision"])
+                left_deviation = 1 - visual_features[1]
+                right_deviation = visual_features[4]
+                if left_deviation < right_deviation:
+                    return np.array([-1.2, 0, 0, 0, 0, 0])
+                else:
+                    return np.array([0, 0, 0, 1.2, 0, 0])
+
             # return self.preprogrammed_steps.get_wing_angles(phase)
