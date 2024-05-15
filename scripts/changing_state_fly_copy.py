@@ -47,7 +47,7 @@ _contact_sensor_placements = tuple(
     for segment in ["Tibia", "Tarsus1", "Tarsus2", "Tarsus3", "Tarsus4", "Tarsus5"]
 )
 variant = "courtship"
-threshold_switch = 100
+threshold_switch = 200
 threshold_wings_open = 2000
 speed_thresh = 0.2
 
@@ -77,6 +77,7 @@ class ChangingStateFly(Fly):
             decision_interval=0.05,
             arousal_state=1,
             wings_state=0,
+            time_crab = 0,
             crab_state=0,
             **kwargs,
         ):
@@ -130,6 +131,7 @@ class ChangingStateFly(Fly):
         self.arousal_state = arousal_state
         self.wings_state = wings_state
         self.crab_state = crab_state
+        self.time_crab = time_crab
         self.visual_inputs_hist = []
         self.coms = np.empty((self.retina.num_ommatidia_per_eye, 2))
         self.timesteps_at_desired_distance = 0
@@ -331,12 +333,17 @@ class ChangingStateFly(Fly):
             action = np.array([0.2, 1.2])
 
         return action, proximity
-    '''
+    
     def get_crab_action(self) :
         proximity = None
-        action = np.array([0.2, 1.2])
+        if self.crab_state == 1:
+            action = np.array([0, 2])
+        if self.crab_state == 2: 
+            action = np.array([1.4, 0])
+        if self.crab_state == 3: 
+            action = np.array([0, 0])  
         return action, proximity
-    '''
+    
     def get_action(self, obs, curr_time):
         """
         Get the action to take based on the arousal state: 
@@ -350,10 +357,10 @@ class ChangingStateFly(Fly):
         - action (np.ndarray): The action.
         """
 
-        if self.arousal_state == 1:
+        if self.arousal_state == 1 and self.crab_state == 0:
             return self.get_chasing_action(obs)
-        #elif self.crab_state == 1:
-        #    return self.get_crab_action()
+        elif self.arousal_state == 1 and self.crab_state != 0:
+            return self.get_crab_action()
         else:
             return self.get_random_action(curr_time)
         
@@ -374,16 +381,27 @@ class ChangingStateFly(Fly):
             self.arousal_state = 1
 
         # Switch state if the fly stays at the desired distance for a certain number of timesteps
-        if speed > speed_thresh:
+        if speed > speed_thresh and self.crab_state == 0:
             self.timesteps_at_desired_distance = 0
             self.wings_state = 0
             self.crab_state = 0
         elif speed < speed_thresh and self.timesteps_at_desired_distance < threshold_switch:
             self.timesteps_at_desired_distance += 1
-        elif speed < speed_thresh and self.timesteps_at_desired_distance >= threshold_switch:
-            self.wings_state = 1
+        elif speed < speed_thresh and self.timesteps_at_desired_distance >= threshold_switch and self.crab_state == 0 :
+            
             self.crab_state = 1
-            self.arousal_state = 0  #To stop the chasing action
+            
+        elif self.crab_state == 1 and self.time_crab < 3000:
+            self.time_crab += 1
+        elif self.time_crab < 8000:
+            self.crab_state = 2
+            self.time_crab += 1
+            self.wings_state = 1       
+        else:
+            self.crab_state = 3
+
+  
+
 
         # Update wings and crabe state
         if self.wings_state == 1:
@@ -474,21 +492,21 @@ class ChangingStateFly(Fly):
         }
         '''
         joint_action = action["joints"]
-        if self.crab_state == 1 : 
+        if self.crab_state == 2 : 
             for joint in range(len(joint_action)):
                 if joint == 4 :
-                    joint_action[joint] = 0.3 #LF
+                    joint_action[joint] += 0 #0.3 #LF
                 elif joint == 11 : 
-                    joint_action[joint] = 0.6 #LM
+                    joint_action[joint] += 0 # 0.6 #LM
                 elif joint == 18 : 
-                    joint_action[joint] = 1 #LH
+                    joint_action[joint] += 0 #1 #LH
                 elif joint == 25 :
-                    joint_action[joint] = 0.3 #RF
+                    joint_action[joint] += 0.3 #RF
                 #elif joint <= 34 : 
                 elif joint == 32 : 
-                    joint_action[joint] = 0.6 # RM
+                    joint_action[joint] += 0.6 # RM
                 elif joint == 40 : 
-                    joint_action[joint] = 1 #RH  
+                    joint_action[joint] += 1 #RH  
         '''
         # Update fly state
         self.update_state(obs)
