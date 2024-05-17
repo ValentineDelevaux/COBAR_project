@@ -38,16 +38,9 @@ class TargetFly(HybridTurningFly):
         features = features.ravel().astype("float32")
 
         # Compare left and right visual features
-        left_deviation = 1 - features[1]
-        right_deviation = features[4]
-        left_found = features[2] > 0.005
-        right_found = features[5] > 0.005
+        # left_deviation = 1 - features[1]
+        # right_deviation = features[4]
+        # left_found = features[2] > 0.005
+        # right_found = features[5] > 0.005
 
         return features, chasing_fly
-
-    @staticmethod
-    def calc_ipsilateral_speed(deviation, is_found):
-        if not is_found:
-            return 1.0
-        else:
-            return np.clip(1 - deviation * 3, 0.4, 1.2)

@@ -81,8 +81,8 @@ def plot_visual_detection(time, left_input, right_input, proximities):
     ax1.set_ylabel("Object detection")
 
     ax2 = ax1.twinx()
-    line3 = ax2.plot(time, proximities, color=palette[2], label="Proximity of the flies")
-    ax2.set_ylabel("Proximity (pixels)")
+    line3 = ax2.plot(time, proximities, color=palette[2], label="Wing extension")
+    ax2.set_ylabel("Wing extension state")
 
     # Create a combined legend for all lines
     lines = line1 + line2

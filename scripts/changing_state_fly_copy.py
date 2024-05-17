@@ -26,6 +26,7 @@ from flygym.arena import BaseArena
 from flygym.util import get_data_path
 
 from .preprogrammed_steps import PreprogrammedSteps
+from flygym.preprogrammed import all_leg_dofs
 
 
 if TYPE_CHECKING:
@@ -46,9 +47,12 @@ _contact_sensor_placements = tuple(
     for leg in ["LF", "LM", "LH", "RF", "RM", "RH"]
     for segment in ["Tibia", "Tarsus1", "Tarsus2", "Tarsus3", "Tarsus4", "Tarsus5"]
 )
+wings_dofs = ["joint_LWing_roll", "joint_LWing_yaw", "joint_LWing", "joint_RWing_roll", "joint_RWing_yaw", "joint_RWing"]
+all_dofs = all_leg_dofs + wings_dofs
+
 variant = "courtship"
-threshold_switch = 200
-threshold_wings_open = 2000
+threshold_switch = 300
+threshold_wings_open = 5000
 speed_thresh = 0.2
 
 class ChangingStateFly(Fly):
@@ -56,6 +60,7 @@ class ChangingStateFly(Fly):
             self, 
             timestep,
             xml_variant=variant,
+            actuated_joints=all_dofs,
             preprogrammed_steps=None,
             intrinsic_freqs=np.ones(6) * 12,
             intrinsic_amps=np.ones(6) * 1,
@@ -72,7 +77,7 @@ class ChangingStateFly(Fly):
             draw_corrections=False,
             contact_sensor_placements=_contact_sensor_placements,
             seed=0,
-            desired_distance=0.2, 
+            desired_distance=0.4, 
             obj_threshold=0.15, 
             decision_interval=0.05,
             arousal_state=1,
@@ -82,7 +87,7 @@ class ChangingStateFly(Fly):
             **kwargs,
         ):
         # Initialize core NMF simulation
-        super().__init__(contact_sensor_placements=contact_sensor_placements, xml_variant=xml_variant, **kwargs, enable_vision=True)
+        super().__init__(contact_sensor_placements=contact_sensor_placements, xml_variant=xml_variant, actuated_joints=actuated_joints, **kwargs, enable_vision=True)
 
         if preprogrammed_steps is None:
             preprogrammed_steps = PreprogrammedSteps()
@@ -315,8 +320,6 @@ class ChangingStateFly(Fly):
         walking_speed = self.calc_walking_speed(proximity)
         fly_action *= walking_speed
 
-        # TODO: detect long stops and switch gait / wings vibrations
-
         return fly_action, proximity
 
     def get_random_action(self, curr_time):
@@ -390,9 +393,7 @@ class ChangingStateFly(Fly):
         elif speed < speed_thresh and self.timesteps_at_desired_distance < threshold_switch:
             self.timesteps_at_desired_distance += 1
         elif speed < speed_thresh and self.timesteps_at_desired_distance >= threshold_switch and self.crab_state == 0 :
-            
             self.crab_state = 1
-            
         elif self.crab_state == 1 and self.time_crab < 3000:
             self.time_crab += 1
         elif (self.crab_state == 1 and self.time_crab <4500 ) or (self.crab_state == 4 and self.time_crab < 4500 ) :
@@ -401,12 +402,10 @@ class ChangingStateFly(Fly):
         elif self.time_crab < 8000:
             self.crab_state = 2
             self.time_crab += 1
-            self.wings_state = 1       
+            # self.wings_state = 1       
         else:
             self.crab_state = 3
-
-  
-
+            self.wings_state = 1
 
         # Update wings and crabe state
         if self.wings_state == 1:
@@ -489,13 +488,7 @@ class ChangingStateFly(Fly):
             )
             adhesion_onoff.append(my_adhesion_onoff)
 
-        #######
-        # if self.crab_state == 1 :
-        #     joints_angles = self.get_joint_angles_crabe_walk(joints_angles, 'L')
-        #######
-
         # Get wings joint   angles
-        # for i, wing in enumerate(self.preprogrammed_steps.wings):
         my_joints_angles = self.get_wings_joint_angles(self.last_open_wing, obs)
         joints_angles.append(my_joints_angles)
 
