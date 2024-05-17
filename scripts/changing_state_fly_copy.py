@@ -337,11 +337,13 @@ class ChangingStateFly(Fly):
     def get_crab_action(self) :
         proximity = None
         if self.crab_state == 1:
-            action = np.array([0, 2])
+            action = np.array([0, 1.3])
         if self.crab_state == 2: 
-            action = np.array([1.4, 0])
+            action = np.array([2, 0])
         if self.crab_state == 3: 
             action = np.array([0, 0])  
+        if self.crab_state == 4: 
+            action = np.array([1, 1]) 
         return action, proximity
     
     def get_action(self, obs, curr_time):
@@ -393,6 +395,9 @@ class ChangingStateFly(Fly):
             
         elif self.crab_state == 1 and self.time_crab < 3000:
             self.time_crab += 1
+        elif (self.crab_state == 1 and self.time_crab <4500 ) or (self.crab_state == 4 and self.time_crab < 4500 ) :
+            self.time_crab += 1
+            self.crab_state = 4
         elif self.time_crab < 8000:
             self.crab_state = 2
             self.time_crab += 1
@@ -414,9 +419,9 @@ class ChangingStateFly(Fly):
                 right_deviation = visual_features[4]
 
                 if left_deviation > right_deviation:
-                    self.last_open_wing = 'R'
-                else:
                     self.last_open_wing = 'L'
+                else:
+                    self.last_open_wing = 'R'
 
     def pre_step(self, action, sim):
         """Step the simulation forward one timestep.
