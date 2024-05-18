@@ -1,38 +1,14 @@
 import numpy as np
-from tqdm import trange
 from gymnasium import spaces
-from gymnasium.utils.env_checker import check_env
-
-from flygym.simulation import SingleFlySimulation, Fly
+from flygym.simulation import Fly
 from flygym.examples.cpg_controller import CPGNetwork
 from flygym.preprogrammed import get_cpg_biases
-
-import logging
-from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
-
-import numpy as np
-from dm_control import mjcf
-from dm_control.utils import transformations
+from typing import TYPE_CHECKING
 from gymnasium import spaces
-from gymnasium.core import ObsType
-from scipy.spatial.transform import Rotation as R
-
-import flygym.preprogrammed as preprogrammed
-import flygym.state as state
-import flygym.util as util
-import flygym.vision as vision
-from flygym.arena import BaseArena
-from flygym.util import get_data_path
-
 from .preprogrammed_steps import PreprogrammedSteps
+from flygym.preprogrammed import all_leg_dofs
 
-
-if TYPE_CHECKING:
-    from flygym.simulation import Simulation
-
-
-
+# Define some constants as in the previous classes
 _tripod_phase_biases = get_cpg_biases("tripod")
 _tripod_coupling_weights = (_tripod_phase_biases > 0) * 10
 _default_correction_vectors = {
@@ -46,14 +22,21 @@ _contact_sensor_placements = tuple(
     for leg in ["LF", "LM", "LH", "RF", "RM", "RH"]
     for segment in ["Tibia", "Tarsus1", "Tarsus2", "Tarsus3", "Tarsus4", "Tarsus5"]
 )
+
+# Define variables specific for the ChangingStateFly class
+wings_dofs = ["joint_LWing_roll", "joint_LWing_yaw", "joint_LWing", "joint_RWing_roll", "joint_RWing_yaw", "joint_RWing"]
+all_dofs = all_leg_dofs + wings_dofs
 variant = "courtship"
-threshold_switch = 100
+threshold_switch = 300
+threshold_wings_open = 5000
+speed_thresh = 0.2
 
 class ChangingStateFly(Fly):
     def __init__(
             self, 
             timestep,
             xml_variant=variant,
+            actuated_joints=all_dofs,
             preprogrammed_steps=None,
             intrinsic_freqs=np.ones(6) * 12,
             intrinsic_amps=np.ones(6) * 1,
@@ -70,16 +53,17 @@ class ChangingStateFly(Fly):
             draw_corrections=False,
             contact_sensor_placements=_contact_sensor_placements,
             seed=0,
-            desired_distance=0.2, 
+            desired_distance=0.4, 
             obj_threshold=0.15, 
             decision_interval=0.05,
-            arousal_state=0,
+            arousal_state=1,
             wings_state=0,
+            time_crab = 0,
             crab_state=0,
             **kwargs,
         ):
         # Initialize core NMF simulation
-        super().__init__(contact_sensor_placements=contact_sensor_placements, xml_variant=xml_variant, **kwargs, enable_vision=True)
+        super().__init__(contact_sensor_placements=contact_sensor_placements, xml_variant=xml_variant, actuated_joints=actuated_joints, **kwargs, enable_vision=True)
 
         if preprogrammed_steps is None:
             preprogrammed_steps = PreprogrammedSteps()
@@ -128,9 +112,12 @@ class ChangingStateFly(Fly):
         self.arousal_state = arousal_state
         self.wings_state = wings_state
         self.crab_state = crab_state
+        self.time_crab = time_crab
         self.visual_inputs_hist = []
         self.coms = np.empty((self.retina.num_ommatidia_per_eye, 2))
         self.timesteps_at_desired_distance = 0
+        self.timesteps_wings_open = 0
+        self.last_open_wing = None
 
         for i in range(self.retina.num_ommatidia_per_eye):
             mask = self.retina.ommatidia_id_map == i + 1
@@ -309,8 +296,6 @@ class ChangingStateFly(Fly):
         walking_speed = self.calc_walking_speed(proximity)
         fly_action *= walking_speed
 
-        # TODO: detect long stops and switch gait / wings vibrations
-
         return fly_action, proximity
 
     def get_random_action(self, curr_time):
@@ -321,13 +306,25 @@ class ChangingStateFly(Fly):
         - action (np.ndarray): The random action.
         """
         proximity = None
-        if curr_time < 1:
+        if curr_time > 1:
             action = np.array([1.2, 0.2])
         else:
             action = np.array([0.2, 1.2])
 
         return action, proximity
-
+    
+    def get_crab_action(self) :
+        proximity = None
+        if self.crab_state == 1:
+            action = np.array([0, 1.3])
+        if self.crab_state == 2: 
+            action = np.array([2, 0])
+        if self.crab_state == 3: 
+            action = np.array([0, 0])  
+        if self.crab_state == 4: 
+            action = np.array([1, 1]) 
+        return action, proximity
+    
     def get_action(self, obs, curr_time):
         """
         Get the action to take based on the arousal state: 
@@ -340,39 +337,67 @@ class ChangingStateFly(Fly):
         Returns:
         - action (np.ndarray): The action.
         """
-        if self.arousal_state == 1:
+
+        if self.arousal_state == 1 and self.crab_state == 0:
             return self.get_chasing_action(obs)
+        elif self.arousal_state == 1 and self.crab_state != 0:
+            return self.get_crab_action()
         else:
             return self.get_random_action(curr_time)
         
-    def update_arousal_state(self, obs):
+
+    def update_state(self, obs):
         """
+        Update the wings state based on the observation.
         Update the arousal state based on the observation.
 
         Parameters:
         - obs (np.ndarray): The observation.
         """
-        #TODO: define another way to update arousal state
-
         visual_features, proximity = self.process_visual_observation(obs["vision"])
+        speed = self.calc_walking_speed(proximity)
+
+        # Update arousal state if the other fly is close
         if self.arousal_state == 0 and proximity < self.desired_distance*3:
             self.arousal_state = 1
 
-    def update_wings_state(self, obs):
-        """
-        Update the wings state based on the observation.
-
-        Parameters:
-        - obs (np.ndarray): The observation.
-        """
-        # TODO
-        visual_features, proximity = self.process_visual_observation(obs["vision"])
-        if proximity < self.desired_distance and self.timesteps_at_desired_distance < 10:
+        # Switch state if the fly stays at the desired distance for a certain number of timesteps
+        if speed > speed_thresh and self.crab_state == 0:
+            self.timesteps_at_desired_distance = 0
+            self.wings_state = 0
+            self.crab_state = 0
+        elif speed < speed_thresh and self.timesteps_at_desired_distance < threshold_switch:
             self.timesteps_at_desired_distance += 1
-        elif proximity < self.desired_distance and self.timesteps_at_desired_distance >= 10:
-            self.wings_state = 1
+        elif speed < speed_thresh and self.timesteps_at_desired_distance >= threshold_switch and self.crab_state == 0 :
             self.crab_state = 1
-    
+        elif self.crab_state == 1 and self.time_crab < 3000:
+            self.time_crab += 1
+        elif (self.crab_state == 1 and self.time_crab <4500 ) or (self.crab_state == 4 and self.time_crab < 4500 ) :
+            self.time_crab += 1
+            self.crab_state = 4
+        elif self.time_crab < 8000:
+            self.crab_state = 2
+            self.time_crab += 1
+            # self.wings_state = 1       
+        else:
+            self.crab_state = 3
+            self.wings_state = 1
+
+        # Update wings and crabe state
+        if self.wings_state == 1:
+            self.timesteps_wings_open += 1
+            if self.timesteps_wings_open >= threshold_wings_open:
+                self.wings_state = 0
+                self.timesteps_wings_open = 0
+
+                left_deviation = 1 - visual_features[1]
+                right_deviation = visual_features[4]
+
+                if left_deviation > right_deviation:
+                    self.last_open_wing = 'L'
+                else:
+                    self.last_open_wing = 'R'
+
     def pre_step(self, action, sim):
         """Step the simulation forward one timestep.
 
@@ -382,23 +407,7 @@ class ChangingStateFly(Fly):
             Array of shape (2,) containing descending signal encoding
             turning.
         """
-        physics = sim.physics
-        joint_action = action["joints"]
-        if self.crab_state == 1 : 
-            for joint in range(len(joint_action)):
-                if joint == 4 :
-                    joint_action[joint] = 0.3 #LF
-                elif joint == 11 : 
-                    joint_action[joint] = 0.6 #LM
-                elif joint == 18 : 
-                    joint_action[joint] = 1 #LH
-                elif joint == 25 :
-                    joint_action[joint] = 0.3 #RF
-                #elif joint <= 34 : 
-                elif joint == 32 : 
-                    joint_action[joint] = 0.6 # RM
-                elif joint == 40 : 
-                    joint_action[joint] = 1 #RH            
+        physics = sim.physics          
 
         # update CPG parameters
         amps = np.repeat(np.abs(action[:, np.newaxis]), 3, axis=1).ravel()
@@ -456,24 +465,79 @@ class ChangingStateFly(Fly):
             adhesion_onoff.append(my_adhesion_onoff)
 
         # Get wings joint   angles
-        # for i, wing in enumerate(self.preprogrammed_steps.wings):
-        my_joints_angles = self.get_wings_joint_angles(self.cpg_network.curr_phases[0])
+        my_joints_angles = self.get_wings_joint_angles(self.last_open_wing, obs)
         joints_angles.append(my_joints_angles)
 
         action = {
             "joints": np.array(np.concatenate(joints_angles)),
             "adhesion": np.array(adhesion_onoff).astype(int),
         }
-
-        # update arousal state
-        self.update_arousal_state(obs)
-
-        # TODO: update wings state
-        # self.update_wings_state(obs)
+        '''
+        joint_action = action["joints"]
+        if self.crab_state == 2 : 
+            for joint in range(len(joint_action)):
+                if joint == 4 :
+                    joint_action[joint] += 0 #0.3 #LF
+                elif joint == 11 : 
+                    joint_action[joint] += 0 # 0.6 #LM
+                elif joint == 18 : 
+                    joint_action[joint] += 0 #1 #LH
+                elif joint == 25 :
+                    joint_action[joint] += 0.3 #RF
+                #elif joint <= 34 : 
+                elif joint == 32 : 
+                    joint_action[joint] += 0.6 # RM
+                elif joint == 40 : 
+                    joint_action[joint] += 1 #RH  
+        '''
+        # Update fly state
+        self.update_state(obs)
 
         return super().pre_step(action, sim)
     
-    def get_wings_joint_angles(self, phase):
+    def get_joint_angles_crabe_walk(self, joint_angles, leg_to_correct):
+        """
+        Get the joint angles for the crabe walk from the normal walk joint angles.
+
+        Parameters:
+        - joint_angles (np.ndarray): The joint angles.
+
+        Returns:
+        - joint_angles (np.ndarray): The joint angles for the crabe walk.
+        """
+        joint_angles_prev = joint_angles.copy()
+        
+        # TODO: switch the right joint angles
+        # for leg in range(6):
+        #     for dof in range(7):
+        #         if dof == 0: # Coxa pitch
+        #             joint_angles[leg * 7 + dof] = joint_angles_prev[leg * 7 + dof]
+        #         elif dof == 1: # Coxa roll
+        #             joint_angles[leg * 7 + dof] = 0.6
+        #         elif dof == 2: # Coxa yaw
+        #             joint_angles[leg * 7 + dof] = 1
+        #         elif dof == 3: # Femur pitch
+        #             joint_angles[leg * 7 + dof] = 0.3
+        #         elif dof == 4: # Femur roll
+        #             joint_angles[leg * 7 + dof] = 0.6
+        #         elif dof == 5: # Tibia pitch
+        #             joint_angles[leg * 7 + dof] = 1
+        #         elif dof == 6: # Tarsus roll
+        #             joint_angles[leg * 7 + dof] = 0.3
+
+        if leg_to_correct == 'L':
+            for leg in range(3):
+                for dof in range(7):
+                    joint_angles[leg * 7 + dof] = -joint_angles_prev[leg * 7 + dof]
+        elif leg_to_correct == 'R':
+            for leg in range(3,6):
+                for dof in range(7):
+                    joint_angles[leg * 7 + dof] = joint_angles_prev[leg * 7 + dof]
+
+        return joint_angles
+
+    
+    def get_wings_joint_angles(self, wing_to_open, obs):
         """Get joint angles for both wings.
 
         Parameters
@@ -489,14 +553,17 @@ class ChangingStateFly(Fly):
         if self.wings_state == 0:
             return np.array([0, 0, 0, 0, 0, 0])
         elif self.wings_state == 1:
-            return self.preprogrammed_steps.get_wing_angles(phase)
-    
-
-    def _set_joints_stiffness_and_damping(self):
-        for joint in self.model.find_all("joint"):
-            if joint.name in self.actuated_joints:
-                joint.stiffness = self.joint_stiffness
-                joint.damping = self.joint_damping
+            if wing_to_open == 'L':
+                return np.array([-1.2, 0, 0, 0, 0, 0])
+            elif wing_to_open == 'R':
+                return np.array([0, 0, 0, 1.2, 0, 0])
             else:
-                joint.stiffness = self.non_actuated_joint_stiffness
-                joint.damping = self.non_actuated_joint_damping
+                visual_features, proximity = self.process_visual_observation(obs["vision"])
+                left_deviation = 1 - visual_features[1]
+                right_deviation = visual_features[4]
+                if left_deviation < right_deviation:
+                    return np.array([-1.2, 0, 0, 0, 0, 0])
+                else:
+                    return np.array([0, 0, 0, 1.2, 0, 0])
+
+            # return self.preprogrammed_steps.get_wing_angles(phase)
