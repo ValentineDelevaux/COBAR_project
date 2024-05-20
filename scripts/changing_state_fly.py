@@ -31,6 +31,7 @@ threshold_switch = 1000
 threshold_wings_open = 5000
 speed_thresh = 0.2
 desired_distance = 0.01
+threshold_wings_closed = 2000
 
 class ChangingStateFly(Fly):
     def __init__(
@@ -319,7 +320,7 @@ class ChangingStateFly(Fly):
         if self.crab_state == 1:
             action = np.array([0, 1.3])
         if self.crab_state == 2: 
-            action = np.array([2, 0])
+            action = np.array([2.3, 0])
         if self.crab_state == 3: 
             action = np.array([0, 0])  
         if self.crab_state == 4: 
@@ -380,7 +381,7 @@ class ChangingStateFly(Fly):
             self.crab_state = 2
             self.time_crab += 1
             # self.wings_state = 1       
-        else:
+        elif self.wings_state==0:
             self.crab_state = 3
             self.wings_state = 1
 
@@ -388,9 +389,8 @@ class ChangingStateFly(Fly):
         if self.wings_state == 1:
             self.timesteps_wings_open += 1
             if self.timesteps_wings_open >= threshold_wings_open:
-                self.wings_state = 0
+                self.wings_state = 2
                 self.timesteps_wings_open = 0
-                self.timesteps_at_desired_distance = 0
 
                 left_deviation = 1 - visual_features[1]
                 right_deviation = visual_features[4]
@@ -399,6 +399,12 @@ class ChangingStateFly(Fly):
                     self.last_open_wing = 'L'
                 else:
                     self.last_open_wing = 'R'
+
+        if self.wings_state == 2: 
+            self.timesteps_wings_open += 1
+            if self.timesteps_wings_open >= threshold_wings_closed:
+                self.wings_state = 1
+                self.timesteps_wings_open = 0
 
     def pre_step(self, action, sim):
         """Step the simulation forward one timestep.
@@ -535,7 +541,7 @@ class ChangingStateFly(Fly):
         np.ndarray
             Joint angles of the wing. The shape of the array is (6,)
         """
-        if self.wings_state == 0:
+        if self.wings_state == 0 or self.wings_state == 2:
             return np.array([0, 0, 0, 0, 0, 0])
         elif self.wings_state == 1:
             if wing_to_open == 'L':

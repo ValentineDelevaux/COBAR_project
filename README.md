@@ -1,19 +1,22 @@
-# COBAR_project
-Implement courtship chasing while keeping a specific distance to the other fly using visual detection of the distance to the other fly
+# Courtship chasing while keeping a specific distance using visual processing
+BIOENG-456 - Controlling Behavior in Animals and Robots - 
+Valentine Delevaux, Julie Le Tallec, Chléa Schiff.
 
 TODO: 
-- finish sideway walking
-- increase time of switch to crabe walking
-- wings --> close and reopen after some time
-- Plot to put in the report --> faire un notebook avec les différents comportements
+- regler le random walking
 - regler la camera quand la mouche sort du cadre 
 - Ecrire readme
 - documenter le code
 
+## Project overview
+The goal of the project is to implement courtship chasing while keeping a specific distance to the other fly using visual detection of the distance between flies.
+
 ## Prerequisites
-the files contained in `data` must be added to the flygym-v1 repository for the provided code to run:
+The files contained in `data` must be added to the flygym-v1 repository for the provided code to run:
 - `config.yaml` should replace the original config.yaml file contained in `flygym-v1/flygym`
 - `neuromechfly_courtship_kinorder_ypr.yml` should be added in `flygym-v1/flygym/data/mjcf`
+
+To run the notebooks, use the flygym-v1 environment, with seaborn installed in addition (use `pip install seaborn`)
 
 ## Structure 
 This repository contains different folders: 
@@ -22,8 +25,9 @@ This repository contains different folders:
 - `outputs`: contains the final videos 
 
 The codes running the different simulations are in the notebooks: 
-- `scenario.ipynb`: run the whole scenario of the courtship behavior
-- `wings_vibrations.ipynb`: run the wing extension behavior 
-- `crabe_wlaking.ipynb`: run the crabe walking 
-- `chasing.ipynb`: run the chasing 
+- `1_scenario.ipynb`: run the whole scenario of the courtship behavior
+- `2_chasing.ipynb`: run the chasing part
+- `3_crab_walk_and_wings_extension.ipynb`: run the crab walking part along with wing extension behavior 
+- `4_robustness_visual_processing`: studies the robustness of visual processing with colored terrain and flies
+
 
