@@ -92,3 +92,45 @@ def plot_visual_detection(time, left_input, right_input, proximities):
 
     fig.tight_layout()
     plt.show()
+
+def plot_overlayed_frames(birdeye_cam_frames, save=False):
+    """
+    Plot the overlayed frames of the birdeye camera.
+
+    Parameters
+    ----------
+    birdeye_cam_frames : numpy array
+        The frames of the birdeye camera.
+    save : bool
+        Whether to save the plot as an image.
+    """
+    frame_indices = np.arange(0, len(birdeye_cam_frames), 30)[:8]
+    snapshots = [birdeye_cam_frames[i] for i in frame_indices]
+    background = np.median(snapshots, axis=0).astype("uint8")
+
+    imgs = []
+
+    for i, img in enumerate(snapshots):
+        is_background = np.isclose(img, background, atol=1).all(axis=2)
+        img_alpha = np.ones((img.shape[0], img.shape[1], 4)) * 255
+        img_alpha[:, :, :3] = img
+        img_alpha[is_background, 3] = 0
+        img_alpha = img_alpha.astype(np.uint8)
+        imgs.append(img_alpha.copy())
+
+    dpi = 72
+    h, w = background.shape[:2]
+
+    fig, ax = plt.subplots(figsize=(w / dpi, h / dpi), dpi=72)
+    ax.imshow(background)
+    ax.axis("off")
+
+    for i, img in enumerate(imgs):
+        ax.imshow(img, alpha=(i + 1) / len(imgs))
+
+    fig.subplots_adjust(0, 0, 1, 1, 0, 0)
+
+    if save:
+        plt.savefig("outputs/overlayed_frames.png", dpi=dpi)
+    else:
+        plt.show()
