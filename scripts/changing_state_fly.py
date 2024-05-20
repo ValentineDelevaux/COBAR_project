@@ -27,9 +27,10 @@ _contact_sensor_placements = tuple(
 wings_dofs = ["joint_LWing_roll", "joint_LWing_yaw", "joint_LWing", "joint_RWing_roll", "joint_RWing_yaw", "joint_RWing"]
 all_dofs = all_leg_dofs + wings_dofs
 variant = "courtship"
-threshold_switch = 300
+threshold_switch = 1000
 threshold_wings_open = 5000
 speed_thresh = 0.2
+desired_distance = 0.01
 
 class ChangingStateFly(Fly):
     def __init__(
@@ -53,12 +54,12 @@ class ChangingStateFly(Fly):
             draw_corrections=False,
             contact_sensor_placements=_contact_sensor_placements,
             seed=0,
-            desired_distance=0.4, 
+            desired_distance=desired_distance, 
             obj_threshold=0.15, 
             decision_interval=0.05,
-            arousal_state=1,
+            arousal_state=0,
             wings_state=0,
-            time_crab = 0,
+            time_crab=0,
             crab_state=0,
             **kwargs,
         ):
@@ -217,7 +218,7 @@ class ChangingStateFly(Fly):
         return obs, info
 
     
-    #----------------------------- CHASING FLY --------------------------------
+    #----------------------------- VISUAL TAXIS FLY --------------------------------
     def process_visual_observation(self, vision_input):
         features = np.zeros((2, 3))
         dist = np.zeros(2)
@@ -298,14 +299,14 @@ class ChangingStateFly(Fly):
 
         return fly_action, proximity
 
-    def get_random_action(self, curr_time):
+    def get_random_action(self, curr_time, obs):
         """
         Get a random action as hybrid turning fly.
 
         Returns:
         - action (np.ndarray): The random action.
         """
-        proximity = None
+        _, proximity = self.process_visual_observation(obs["vision"])
         if curr_time > 1:
             action = np.array([1.2, 0.2])
         else:
@@ -313,8 +314,8 @@ class ChangingStateFly(Fly):
 
         return action, proximity
     
-    def get_crab_action(self) :
-        proximity = None
+    def get_crab_action(self, obs) :
+        _, proximity = self.process_visual_observation(obs["vision"])
         if self.crab_state == 1:
             action = np.array([0, 1.3])
         if self.crab_state == 2: 
@@ -341,9 +342,9 @@ class ChangingStateFly(Fly):
         if self.arousal_state == 1 and self.crab_state == 0:
             return self.get_chasing_action(obs)
         elif self.arousal_state == 1 and self.crab_state != 0:
-            return self.get_crab_action()
+            return self.get_crab_action(obs)
         else:
-            return self.get_random_action(curr_time)
+            return self.get_random_action(curr_time, obs)
         
 
     def update_state(self, obs):
@@ -389,6 +390,7 @@ class ChangingStateFly(Fly):
             if self.timesteps_wings_open >= threshold_wings_open:
                 self.wings_state = 0
                 self.timesteps_wings_open = 0
+                self.timesteps_at_desired_distance = 0
 
                 left_deviation = 1 - visual_features[1]
                 right_deviation = visual_features[4]
@@ -472,24 +474,7 @@ class ChangingStateFly(Fly):
             "joints": np.array(np.concatenate(joints_angles)),
             "adhesion": np.array(adhesion_onoff).astype(int),
         }
-        '''
-        joint_action = action["joints"]
-        if self.crab_state == 2 : 
-            for joint in range(len(joint_action)):
-                if joint == 4 :
-                    joint_action[joint] += 0 #0.3 #LF
-                elif joint == 11 : 
-                    joint_action[joint] += 0 # 0.6 #LM
-                elif joint == 18 : 
-                    joint_action[joint] += 0 #1 #LH
-                elif joint == 25 :
-                    joint_action[joint] += 0.3 #RF
-                #elif joint <= 34 : 
-                elif joint == 32 : 
-                    joint_action[joint] += 0.6 # RM
-                elif joint == 40 : 
-                    joint_action[joint] += 1 #RH  
-        '''
+
         # Update fly state
         self.update_state(obs)
 
