@@ -65,7 +65,8 @@ def plot_chasing(time, fly0_speeds, fly1_speeds, proximities, smooth=True):
     fig.tight_layout()
     plt.show()
 
-def plot_visual_detection(time, left_input, right_input, wings):
+
+def plot_visual_detection_(time, left_input, right_input, wings):
     """
     Plot the object detection signals from the left and right eyes, as well as the proximity between the flies, during simulation.
 
@@ -82,23 +83,30 @@ def plot_visual_detection(time, left_input, right_input, wings):
     """
     # Create a color palette
     palette = sns.color_palette("Set2", 3)
-
     fig, ax1 = plt.subplots(figsize=(20, 6))
-    line1 = ax1.plot(time, left_input, color=palette[0], label="Left object detection")
-    line2 = ax1.plot(time, right_input, color=palette[1], label="right object detection")
-    ax1.set_xlabel("time (s)")
-    ax1.set_ylabel("Object detection")
+    span1 = plt.axvspan(1.275, 1.78, color='lavenderblush', label='Extended Wing')
+    span2 = plt.axvspan(1.98, 2.46, color='lavenderblush')
+    span3 = plt.axvspan(2.67, 3, color='lavenderblush')
+    line1 = ax1.plot(time, left_input, color='green', label="Left object detection", linewidth = 3)
+    line2 = ax1.plot(time, right_input, color='skyblue', label="Right object detection", linewidth = 3)
+    ax1.set_xlabel("Time (s)", fontsize = 'xx-large')
+    ax1.set_ylabel("Object Detection", fontsize = 'xx-large')
 
     ax2 = ax1.twinx()
-    wings[wings == 2] = 0
-    line3 = ax2.plot(time, wings, color=palette[2], label="Wing extension")
-    ax2.set_ylabel("Wing extension state")
+    new_wings = [0 if wing == 2 else wing for wing in wings]
+    line3 = ax2.plot(time,new_wings, color='orchid', label="Wing extension", linewidth = 3)
+    ax2.set_ylabel("Wing extension state", fontsize = 'xx-large')
+    ax1.tick_params(axis='both', which='major', labelsize=15)
+
+    ax2.tick_params(axis='both', which='major', labelsize=15)
+    
+
 
     # Create a combined legend for all lines
-    lines = line1 + line2
+    lines = line1 + line2 + [span1]  # Include span1 in the legend
     labels = [l.get_label() for l in lines]
-    ax1.legend(lines, labels, loc='upper left')
-    ax2.legend([line3[0]], [line3[0].get_label()], loc='upper right')
+    ax1.legend(lines, labels, loc='upper left', fontsize = 'xx-large')
+    ax2.legend([line3[0]], [line3[0].get_label()], loc='upper right', fontsize = 'xx-large')
 
     fig.tight_layout()
     plt.show()

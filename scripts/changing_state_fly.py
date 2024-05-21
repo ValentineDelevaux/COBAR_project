@@ -417,7 +417,7 @@ class ChangingStateFly(Fly):
         elif (self.crab_state == 1 and self.time_crab <4500 ) or (self.crab_state == 4 and self.time_crab < 4500 ) :
             self.time_crab += 1
             self.crab_state = 4
-        elif self.time_crab < 8000:
+        elif self.time_crab < 7000:
             self.crab_state = 2
             self.time_crab += 1
             # self.wings_state = 1       
