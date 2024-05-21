@@ -300,7 +300,7 @@ class ChangingStateFly(Fly):
 
         return fly_action, proximity
 
-    def get_random_action(self, curr_time, obs):
+    def get_random_action_2(self, curr_time, obs):
         """
         Get a random action as hybrid turning fly.
 
@@ -315,12 +315,52 @@ class ChangingStateFly(Fly):
 
         return action, proximity
     
+    import numpy as np
+
+    def get_random_action(self, curr_time, obs):
+        """
+        Get a random action as hybrid turning fly.
+
+        Parameters:
+        - curr_time (float): The current time in the simulation.
+        - obs (np.ndarray): The observation.
+
+        Returns:
+        - action (np.ndarray): The random action.
+        - proximity (float): The proximity value from the observation.
+        """
+        _, proximity = self.process_visual_observation(obs["vision"])
+
+        # Initialize or update the direction and period
+        if not hasattr(self, 'current_direction'):
+            self.current_direction = 'right'
+            self.time_since_switch = 0
+            self.current_period = np.random.randint(100, 200)  # Random period between 100 and 200 timesteps
+
+        # Update the time since the last switch
+        self.time_since_switch += 1
+
+        # Switch direction if the current period has expired
+        if self.time_since_switch >= self.current_period:
+            self.current_direction = 'left' if self.current_direction == 'right' else 'right'
+            self.time_since_switch = 0
+            self.current_period = np.random.randint(100, 200)  # Generate a new random period
+
+        # Set the action based on the current direction
+        if self.current_direction == 'right':
+            action = np.array([1.2, 0.2])
+        else:
+            action = np.array([0.2, 1.2])
+
+        return action, proximity
+
+    
     def get_crab_action(self, obs) :
         _, proximity = self.process_visual_observation(obs["vision"])
         if self.crab_state == 1:
             action = np.array([0, 1.3])
         if self.crab_state == 2: 
-            action = np.array([2.3, 0])
+            action = np.array([2, 0])
         if self.crab_state == 3: 
             action = np.array([0, 0])  
         if self.crab_state == 4: 
@@ -360,7 +400,7 @@ class ChangingStateFly(Fly):
         speed = self.calc_walking_speed(proximity)
 
         # Update arousal state if the other fly is close
-        if self.arousal_state == 0 and proximity < self.desired_distance*3:
+        if self.arousal_state == 0 and proximity < self.desired_distance/2:
             self.arousal_state = 1
 
         # Switch state if the fly stays at the desired distance for a certain number of timesteps

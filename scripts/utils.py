@@ -56,7 +56,7 @@ def plot_chasing(time, fly0_speeds, fly1_speeds, proximities, smooth=True):
     fig.tight_layout()
     plt.show()
 
-def plot_visual_detection(time, left_input, right_input, proximities):
+def plot_visual_detection(time, left_input, right_input, wings):
     """
     Plot the object detection signals from the left and right eyes, as well as the proximity between the flies, during simulation.
 
@@ -68,8 +68,8 @@ def plot_visual_detection(time, left_input, right_input, proximities):
         The object detection signals from the left eye at each time point.
     right_input : numpy array
         The object detection signals from the left and right eyes at each time point.
-    proximities : numpy array
-        The proximity between the flies at each time point.
+    wings : numpy array
+        The wings extension statesat each time point.
     """
     # Create a color palette
     palette = sns.color_palette("Set2", 3)
@@ -81,7 +81,8 @@ def plot_visual_detection(time, left_input, right_input, proximities):
     ax1.set_ylabel("Object detection")
 
     ax2 = ax1.twinx()
-    line3 = ax2.plot(time, proximities, color=palette[2], label="Wing extension")
+    wings[wings == 2] = 0
+    line3 = ax2.plot(time, wings, color=palette[2], label="Wing extension")
     ax2.set_ylabel("Wing extension state")
 
     # Create a combined legend for all lines
@@ -93,7 +94,7 @@ def plot_visual_detection(time, left_input, right_input, proximities):
     fig.tight_layout()
     plt.show()
 
-def plot_overlayed_frames(birdeye_cam_frames, save=False):
+def plot_overlayed_frames(birdeye_cam_frames, nb_frames=10, save=False):
     """
     Plot the overlayed frames of the birdeye camera.
 
@@ -101,10 +102,13 @@ def plot_overlayed_frames(birdeye_cam_frames, save=False):
     ----------
     birdeye_cam_frames : numpy array
         The frames of the birdeye camera.
+    nb_frames : int
+        The number of frames to plot.
     save : bool
         Whether to save the plot as an image.
     """
-    frame_indices = np.arange(0, len(birdeye_cam_frames), 30)[:8]
+    #frame_indices = np.arange(0, len(birdeye_cam_frames), 30)[:8]
+    frame_indices = np.linspace(0, len(birdeye_cam_frames), nb_frames, endpoint=False, dtype=int)
     snapshots = [birdeye_cam_frames[i] for i in frame_indices]
     background = np.median(snapshots, axis=0).astype("uint8")
 
