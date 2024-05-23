@@ -2,12 +2,6 @@
 BIOENG-456 - Controlling Behavior in Animals and Robots - 
 Valentine Delevaux, Julie Le Tallec, Chléa Schiff.
 
-TODO: 
-- regler le random walking
-- regler la camera quand la mouche sort du cadre 
-- Ecrire readme
-- documenter le code
-
 ## Project overview
 The goal of the project is to implement courtship chasing while keeping a specific distance to the other fly using visual detection of the distance between flies.
 

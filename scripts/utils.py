@@ -66,7 +66,7 @@ def plot_chasing(time, fly0_speeds, fly1_speeds, proximities, smooth=True):
     plt.show()
 
 
-def plot_visual_detection_(time, left_input, right_input, wings):
+def plot_visual_detection(time, left_input, right_input, wings):
     """
     Plot the object detection signals from the left and right eyes, as well as the proximity between the flies, during simulation.
 

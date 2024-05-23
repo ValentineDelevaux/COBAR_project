@@ -30,7 +30,7 @@ variant = "courtship"
 threshold_switch = 1000
 threshold_wings_open = 5000
 speed_thresh = 0.2
-desired_distance = 0.01
+desired_distance = 0.009
 threshold_wings_closed = 2000
 
 class ChangingStateFly(Fly):
@@ -119,7 +119,7 @@ class ChangingStateFly(Fly):
         self.coms = np.empty((self.retina.num_ommatidia_per_eye, 2))
         self.timesteps_at_desired_distance = 0
         self.timesteps_wings_open = 0
-        self.last_open_wing = None
+        self.last_open_wing = 'L'
 
         for i in range(self.retina.num_ommatidia_per_eye):
             mask = self.retina.ommatidia_id_map == i + 1
@@ -335,7 +335,7 @@ class ChangingStateFly(Fly):
         if not hasattr(self, 'current_direction'):
             self.current_direction = 'right'
             self.time_since_switch = 0
-            self.current_period = np.random.randint(100, 200)  # Random period between 100 and 200 timesteps
+            self.current_period = np.random.randint(1000, 2000)  # Random period between 100 and 200 timesteps
 
         # Update the time since the last switch
         self.time_since_switch += 1
@@ -344,7 +344,7 @@ class ChangingStateFly(Fly):
         if self.time_since_switch >= self.current_period:
             self.current_direction = 'left' if self.current_direction == 'right' else 'right'
             self.time_since_switch = 0
-            self.current_period = np.random.randint(100, 200)  # Generate a new random period
+            self.current_period = np.random.randint(1000, 2000)  # Generate a new random period
 
         # Set the action based on the current direction
         if self.current_direction == 'right':
@@ -356,6 +356,17 @@ class ChangingStateFly(Fly):
 
     
     def get_crab_action(self, obs) :
+        """
+        Get the action as chasing fly during the crab walk.
+        The action depends on the step of the crab walk.
+
+        Parameters:
+        - obs (np.ndarray): The observation.
+
+        Returns:
+        - action (np.ndarray): The random action.
+        - proximity (float): The proximity value from the observation.
+        """
         _, proximity = self.process_visual_observation(obs["vision"])
         if self.crab_state == 1:
             action = np.array([0, 1.3])
@@ -417,7 +428,7 @@ class ChangingStateFly(Fly):
         elif (self.crab_state == 1 and self.time_crab <4500 ) or (self.crab_state == 4 and self.time_crab < 4500 ) :
             self.time_crab += 1
             self.crab_state = 4
-        elif self.time_crab < 7000:
+        elif self.time_crab < 9000:
             self.crab_state = 2
             self.time_crab += 1
             # self.wings_state = 1       
@@ -427,6 +438,7 @@ class ChangingStateFly(Fly):
 
         # Update wings and crabe state
         if self.wings_state == 1:
+
             self.timesteps_wings_open += 1
             if self.timesteps_wings_open >= threshold_wings_open:
                 self.wings_state = 2
@@ -437,8 +449,12 @@ class ChangingStateFly(Fly):
 
                 if left_deviation > right_deviation:
                     self.last_open_wing = 'L'
-                else:
+
+                elif left_deviation < right_deviation:
                     self.last_open_wing = 'R'
+
+
+
 
         if self.wings_state == 2: 
             self.timesteps_wings_open += 1
