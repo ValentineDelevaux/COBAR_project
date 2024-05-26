@@ -20,6 +20,23 @@ class ChasingFly(HybridTurningFly):
             self.coms[i, :] = np.argwhere(mask).mean(axis=0)
 
     def process_visual_observation(self, vision_input):
+        """
+        Process the visual observation data to extract features and distances.
+
+        Parameters
+        ----------
+        vision_input : list of numpy.ndarray
+            List of 2D arrays representing the visual input from the ommatidia for each eye.
+
+        Returns
+        -------
+        numpy.ndarray
+            Flattened array of features extracted from the visual input. The features include
+            normalized y_center, x_center, and area of the detected objects.
+        float
+            Sum of normalized distances to the detected objects.
+        """
+
         features = np.zeros((2, 3))
         dist = np.zeros(2)
 
@@ -42,6 +59,23 @@ class ChasingFly(HybridTurningFly):
         return features.ravel().astype("float32"), dist.sum()
 
     def calc_ipsilateral_speed(self, deviation, is_found):
+        """
+        Calculate the ipsilateral speed based on deviation and detection status.
+
+        Parameters
+        ----------
+        deviation : float
+            The deviation from the desired trajectory.
+        is_found : bool
+            Whether the target is found.
+
+        Returns
+        -------
+        float
+            The calculated ipsilateral speed. If the target is not found, returns a default speed of 1.0. 
+            Otherwise, returns a speed adjusted based on the deviation, clipped to the range [0.4, 1.2].
+        """
+         
         if not is_found:
             return 1.0
         else:

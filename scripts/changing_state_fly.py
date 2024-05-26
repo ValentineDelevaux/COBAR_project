@@ -221,6 +221,22 @@ class ChangingStateFly(Fly):
     
     #----------------------------- VISUAL TAXIS FLY --------------------------------
     def process_visual_observation(self, vision_input):
+        """
+        Process the visual observation data to extract features and distances.
+
+        Parameters
+        ----------
+        vision_input : list of numpy.ndarray
+            List of 2D arrays representing the visual input from the ommatidia for each eye.
+
+        Returns
+        -------
+        numpy.ndarray
+            Flattened array of features extracted from the visual input. The features include
+            normalized y_center, x_center, and area of the detected objects.
+        float
+            Sum of normalized distances to the detected objects.
+        """
         features = np.zeros((2, 3))
         dist = np.zeros(2)
 
@@ -243,6 +259,22 @@ class ChangingStateFly(Fly):
         return features.ravel().astype("float32"), dist.sum()
 
     def calc_ipsilateral_speed(self, deviation, is_found):
+        """
+        Calculate the ipsilateral speed based on deviation and detection status.
+
+        Parameters
+        ----------
+        deviation : float
+            The deviation from the desired trajectory.
+        is_found : bool
+            Whether the target is found.
+
+        Returns
+        -------
+        float
+            The calculated ipsilateral speed. If the target is not found, returns a default speed of 1.0. 
+            Otherwise, returns a speed adjusted based on the deviation, clipped to the range [0.4, 1.2].
+        """
         if not is_found:
             return 1.0
         else:
@@ -553,24 +585,6 @@ class ChangingStateFly(Fly):
         - joint_angles (np.ndarray): The joint angles for the crabe walk.
         """
         joint_angles_prev = joint_angles.copy()
-        
-        # TODO: switch the right joint angles
-        # for leg in range(6):
-        #     for dof in range(7):
-        #         if dof == 0: # Coxa pitch
-        #             joint_angles[leg * 7 + dof] = joint_angles_prev[leg * 7 + dof]
-        #         elif dof == 1: # Coxa roll
-        #             joint_angles[leg * 7 + dof] = 0.6
-        #         elif dof == 2: # Coxa yaw
-        #             joint_angles[leg * 7 + dof] = 1
-        #         elif dof == 3: # Femur pitch
-        #             joint_angles[leg * 7 + dof] = 0.3
-        #         elif dof == 4: # Femur roll
-        #             joint_angles[leg * 7 + dof] = 0.6
-        #         elif dof == 5: # Tibia pitch
-        #             joint_angles[leg * 7 + dof] = 1
-        #         elif dof == 6: # Tarsus roll
-        #             joint_angles[leg * 7 + dof] = 0.3
 
         if leg_to_correct == 'L':
             for leg in range(3):

@@ -16,6 +16,22 @@ class TargetFly(HybridTurningFly):
             self.coms[i, :] = np.argwhere(mask).mean(axis=0)
 
     def process_visual_observation(self, vision_input):
+        """
+        Process the visual observation data to extract features and distances.
+
+        Parameters
+        ----------
+        vision_input : list of numpy.ndarray
+            List of 2D arrays representing the visual input from the ommatidia for each eye.
+
+        Returns
+        -------
+        numpy.ndarray
+            Flattened array of features extracted from the visual input. The features include
+            normalized y_center, x_center, and area of the detected objects.
+        float
+            Sum of normalized distances to the detected objects.
+        """
         # Calculate visual features
         features = np.zeros((2, 3))
         chasing_fly = np.zeros(2)

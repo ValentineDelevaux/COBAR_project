@@ -250,39 +250,3 @@ class HybridTurningFly(Fly):
         return super().pre_step(action, sim)
     
 
-# if __name__ == "__main__":
-#     from flygym import Fly, Camera
-
-#     run_time = 2
-#     timestep = 1e-4
-#     contact_sensor_placements = [
-#         f"{leg}{segment}"
-#         for leg in ["LF", "LM", "LH", "RF", "RM", "RH"]
-#         for segment in ["Tibia", "Tarsus1", "Tarsus2", "Tarsus3", "Tarsus4", "Tarsus5"]
-#     ]
-
-#     fly = HybridTurningFly(
-#         timestep=timestep,
-#         enable_adhesion=True,
-#         draw_adhesion=True,
-#         actuator_kp=20,
-#         contact_sensor_placements=contact_sensor_placements,
-#         spawn_pos=(0, 0, 0.2),
-#     )
-
-#     cam = Camera(fly=fly, camera_id="Animat/camera_top", play_speed=0.1)
-#     sim = SingleFlySimulation(fly=fly, cameras=[cam], timestep=1e-4)
-#     check_env(sim)
-
-#     obs, info = sim.reset()
-#     for i in trange(int(run_time / sim.timestep)):
-#         curr_time = i * sim.timestep
-#         if curr_time < 1:
-#             action = np.array([1.2, 0.2])
-#         else:
-#             action = np.array([0.2, 1.2])
-
-#         obs, reward, terminated, truncated, info = sim.step(action)
-#         sim.render()
-
-#     cam.save_video("./outputs/hybrid_turning.mp4")
