@@ -1,11 +1,7 @@
 import numpy as np
 import flygym as flygym
 import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
-import logging
-import imageio
-import cv2
+import matplotlib.patches as mpatches
 
 
 def plot_chasing(time, fly0_speeds, fly1_speeds, proximities, smooth=True):
@@ -34,8 +30,6 @@ def plot_chasing(time, fly0_speeds, fly1_speeds, proximities, smooth=True):
         fly1_speeds = np.convolve(fly1_speeds, window, mode='same')
         proximities = np.convolve(proximities, window, mode='same')
 
-    # Create a color palette
-    palette = sns.color_palette("Set2", 3)
 
     fig, ax1 = plt.subplots(figsize=(20, 6))
     line1 = ax1.plot(time, fly0_speeds, color='seagreen', label="Chasing fly speed", linewidth = 3)
@@ -43,15 +37,14 @@ def plot_chasing(time, fly0_speeds, fly1_speeds, proximities, smooth=True):
     ax1.set_xlabel("Time (s)", fontsize = 'xx-large')
     ax1.set_ylabel("Speed (mm/s)", fontsize = 'xx-large')
 
-    ax1.set_xlim(0, 3.5)  # Set x-axis limits
-    ax1.set_ylim(0, 25)
+    ax1.set_ylim(0, 1.2 * np.max([np.max(fly0_speeds), np.max(fly1_speeds)]))
     
 
     ax2 = ax1.twinx()
     line3 = ax2.plot(time, proximities, color= 'orchid', label="Proximity of the flies", linewidth = 3)
     ax2.set_ylabel("Proximity (pixels)", fontsize = 'xx-large')
 
-    ax2.set_ylim(0, 0.06)
+    ax2.set_ylim(0, 1.2 * np.max(proximities))
     # Create a combined legend for all lines
     lines = line1 + line2
     labels = [l.get_label() for l in lines]
@@ -79,36 +72,79 @@ def plot_visual_detection(time, left_input, right_input, wings):
     right_input : numpy array
         The object detection signals from the left and right eyes at each time point.
     wings : numpy array
-        The wings extension statesat each time point.
+        The wings extension states at each time point.
     """
-    # Create a color palette
-    palette = sns.color_palette("Set2", 3)
+    wings = [0 if wing == 2 else wing for wing in wings]    
     fig, ax1 = plt.subplots(figsize=(20, 6))
-    span1 = plt.axvspan(1.275, 1.78, color='lavenderblush', label='Extended Wing')
-    span2 = plt.axvspan(1.98, 2.46, color='lavenderblush')
-    span3 = plt.axvspan(2.67, 3, color='lavenderblush')
+    start = None
+    for i, wing in enumerate(wings):
+        if wing == 1 and start is None:
+            start = time[i]
+        elif wing != 1 and start is not None:
+            ax1.axvspan(start, time[i], color='lavenderblush')
+            start = None
+    if wings[-1] == 1:
+        ax1.axvspan(start, time[-1], color='lavenderblush')
+
     line1 = ax1.plot(time, left_input, color='green', label="Left object detection", linewidth = 3)
     line2 = ax1.plot(time, right_input, color='skyblue', label="Right object detection", linewidth = 3)
     ax1.set_xlabel("Time (s)", fontsize = 'xx-large')
     ax1.set_ylabel("Object Detection", fontsize = 'xx-large')
 
-    ax2 = ax1.twinx()
-    new_wings = [0 if wing == 2 else wing for wing in wings]
-    line3 = ax2.plot(time,new_wings, color='orchid', label="Wing extension", linewidth = 3)
-    ax2.set_ylabel("Wing extension state", fontsize = 'xx-large')
-    ax1.tick_params(axis='both', which='major', labelsize=15)
-
-    ax2.tick_params(axis='both', which='major', labelsize=15)
-    
-
+    # Create a patch for the axvspan
+    span_patch = mpatches.Patch(color='lavenderblush', label='Wing extension')
 
     # Create a combined legend for all lines
-    lines = line1 + line2 + [span1]  # Include span1 in the legend
+    lines = line1 + line2 + [span_patch]
     labels = [l.get_label() for l in lines]
     ax1.legend(lines, labels, loc='upper left', fontsize = 'xx-large')
-    ax2.legend([line3[0]], [line3[0].get_label()], loc='upper right', fontsize = 'xx-large')
 
     fig.tight_layout()
+    plt.show()
+
+def plot_velocity_auto(t, left, right):
+    """
+    Plot the left and right velocities over time, with different behaviors highlighted.
+
+    Parameters
+    ----------
+    t : array-like
+        The time points at which the data was recorded.
+    left : array-like
+        The left velocities at each time point.
+    right : array-like
+        The right velocities at each time point.
+    """
+    plt.plot(t, left, label = 'Left Velocity', c = 'dimgray')
+    plt.plot(t, right, label = 'Right Velocity', c = 'purple')
+    plt.xlim(0, 1.5)
+    plt.ylim(-0.2, 3)
+
+    # Find the point where the right velocity goes up
+    for i in range(100, len(right)):
+        if right[i] > 1:
+            left_turn = t[i]
+            break
+
+    # Find the point where the velocity goes to 0
+    for i in range(int(left_turn) + 1, len(right)):
+        if np.isclose(left[i], 0, atol=0.01) and np.isclose(right[i], 0, atol=0.01):
+            right_turn = t[i]
+            break
+
+    for i in range(int(left_turn) + 1, len(right)):
+        if left[i] > 1.5:
+            real_right_turn = t[i]
+            break
+
+    plt.axvspan(0, left_turn, color = 'lavenderblush', label = 'Chasing' )
+    plt.axvspan(left_turn, right_turn, color = 'lavender', label = 'Crab Walking' )
+    plt.axvspan(right_turn, t[-1], color = 'azure', label = 'Wing Extension' )
+    plt.axvline(x = left_turn, linestyle = '--',label = 'Left Turn', color = 'orchid')
+    plt.axvline(x = real_right_turn, linestyle = '--',label = 'Right Turn', color = 'cornflowerblue')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Velocity Factor')
+    plt.legend(bbox_to_anchor = (1.05, 1), loc = 'upper left')
     plt.show()
 
 def plot_overlayed_frames(birdeye_cam_frames, nb_frames=10, save=False):
