@@ -5,7 +5,7 @@ from flygym.examples.cpg_controller import CPGNetwork
 from flygym.preprogrammed import get_cpg_biases
 from typing import TYPE_CHECKING
 from gymnasium import spaces
-from .preprogrammed_steps import PreprogrammedSteps
+from flygym.examples.common import PreprogrammedSteps
 from flygym.preprogrammed import all_leg_dofs
 
 # Define some constants as in the previous classes
@@ -485,9 +485,6 @@ class ChangingStateFly(Fly):
                 elif left_deviation < right_deviation:
                     self.last_open_wing = 'R'
 
-
-
-
         if self.wings_state == 2: 
             self.timesteps_wings_open += 1
             if self.timesteps_wings_open >= threshold_wings_closed:
@@ -573,29 +570,6 @@ class ChangingStateFly(Fly):
         self.update_state(obs)
 
         return super().pre_step(action, sim)
-    
-    def get_joint_angles_crabe_walk(self, joint_angles, leg_to_correct):
-        """
-        Get the joint angles for the crabe walk from the normal walk joint angles.
-
-        Parameters:
-        - joint_angles (np.ndarray): The joint angles.
-
-        Returns:
-        - joint_angles (np.ndarray): The joint angles for the crabe walk.
-        """
-        joint_angles_prev = joint_angles.copy()
-
-        if leg_to_correct == 'L':
-            for leg in range(3):
-                for dof in range(7):
-                    joint_angles[leg * 7 + dof] = -joint_angles_prev[leg * 7 + dof]
-        elif leg_to_correct == 'R':
-            for leg in range(3,6):
-                for dof in range(7):
-                    joint_angles[leg * 7 + dof] = joint_angles_prev[leg * 7 + dof]
-
-        return joint_angles
 
     
     def get_wings_joint_angles(self, wing_to_open, obs):
@@ -626,5 +600,3 @@ class ChangingStateFly(Fly):
                     return np.array([-1.2, 0, 0, 0, 0, 0])
                 else:
                     return np.array([0, 0, 0, 1.2, 0, 0])
-
-            # return self.preprogrammed_steps.get_wing_angles(phase)
