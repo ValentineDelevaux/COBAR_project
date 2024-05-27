@@ -24,7 +24,8 @@ The codes used to run the different simulations are in the notebooks:
 - `4_robustness_visual_processing`: studies the robustness of visual processing with colored terrain and flies
 
 ## Report and videos
-All methods and results are described in the [Report](BIOENG_456-Report.pdf)
+All methods and results are described in the [Report](BIOENG_456-Report.pdf).
+
 All videos produced using this code is on [the drive](https://drive.google.com/drive/u/1/folders/1RxnbTyR-75OWsPtSnCLu-PBjjf7ijszE).
 
 
